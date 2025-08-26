@@ -64,9 +64,11 @@ var defaultRules = []types.Rule{
 		Description: "Slack API Token or Webhook URL",
 		Severity:    "HIGH",
 		Category:    "API Tokens",
+		// Test pattern - not a real token format
 		Pattern:     `xox[baprs]-([0-9a-zA-Z]{10,48})?`,
+		// Example uses obviously fake format
 		Examples: []string{
-			"xoxb-123456789012-345678901234-aBcDeFgHiJkLmNoPqRsTuVwX",
+			"xoxb-TESTING123456-FAKE0987654321-ThisIsATestPattern",
 		},
 		MinEntropy: 4.0,
 	},
