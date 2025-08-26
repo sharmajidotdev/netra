@@ -1,0 +1,31 @@
+scan:
+  max_depth: 10
+  threads: 4
+  max_file_size: 1048576  # 1MB
+  skip_git: true
+  skip_vendor: true
+  exit_on: "high"
+  excludes:
+    - ".git/"
+    - "node_modules/"
+    - "vendor/"
+    - "*.min.js"
+    - "*.min.css"
+
+output:
+  format: "human"  # json, sarif, or human
+
+llm:
+  enabled: false
+  provider: "openai"
+  model: "gpt-4"
+  api_key: ""  # Can also be set via environment variable
+  explain: false
+
+rules:
+  custom_patterns:
+    - name: "Custom API Key"
+      pattern: "api_key[_=]:[ '\"]([0-9a-zA-Z]{32,})[ '\"]"
+      confidence: 80
+      type: "API Key"
+      severity: "high"
