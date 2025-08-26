@@ -65,7 +65,7 @@ var defaultRules = []types.Rule{
 		Severity:    "HIGH",
 		Category:    "API Tokens",
 		// Test pattern - not a real token format
-		Pattern:     `xox[baprs]-([0-9a-zA-Z]{10,48})?`,
+		Pattern: `xox[baprs]-([0-9a-zA-Z]{10,48})?`,
 		// Example uses obviously fake format
 		Examples: []string{
 			"xoxb-TESTING123456-FAKE0987654321-ThisIsATestPattern",
