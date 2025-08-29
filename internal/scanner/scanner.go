@@ -17,7 +17,7 @@ type Scanner struct {
 	rules      []types.Rule
 	workers    int
 	bufferSize int
-	stats      *types.Stats
+	stats      *scanStats
 }
 
 // Option is a function type for scanner configuration
@@ -78,8 +78,9 @@ func New(opts ...Option) *Scanner {
 // Scan runs a scan on provided inputs
 func (s *Scanner) Scan(ctx context.Context, inputs ...string) (*types.Result, error) {
 	start := time.Now()
+	s.initStats() // Reset stats for new scan
 	result := &types.Result{
-		Stats: types.Stats{},
+		Stats: *s.stats.Stats,
 	}
 
 	// Create channels for worker pool
@@ -116,7 +117,7 @@ func (s *Scanner) Scan(ctx context.Context, inputs ...string) (*types.Result, er
 	var allFindings []types.Finding
 	for findings := range results {
 		allFindings = append(allFindings, findings...)
-		result.Stats.Findings += len(findings)
+		s.stats.addFindings(len(findings))
 	}
 
 	// Check for errors
@@ -133,10 +134,14 @@ func (s *Scanner) Scan(ctx context.Context, inputs ...string) (*types.Result, er
 		result.Stats.ValidationTime = time.Since(validationStart)
 	}
 
+	// Copy the current stats to the result
+	result.Stats = *s.stats.Stats
+
 	result.Findings = allFindings
 
-	// Update stats
-	result.Stats.DurationMs = int(time.Since(start).Milliseconds())
+	// Update final stats
+	s.stats.setDuration(time.Since(start))
+	result.Stats = *s.stats.Stats
 
 	return result, nil
 }

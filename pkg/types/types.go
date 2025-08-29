@@ -1,6 +1,8 @@
 package types
 
-import "time"
+import (
+	"time"
+)
 
 // Finding represents a detected secret
 type Finding struct {
@@ -25,21 +27,20 @@ type Finding struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
+// Stats tracks scanning statistics
+type Stats struct {
+	FilesScanned   int32         `json:"files_scanned"`
+	FilesSkipped   int32         `json:"files_skipped"`
+	BytesScanned   int64         `json:"bytes_scanned"`
+	Findings       int32         `json:"findings"`
+	Duration       int64         `json:"duration"`
+	ValidationTime time.Duration `json:"validation_time,omitempty"`
+}
+
 // Result holds scan results
 type Result struct {
 	Findings []Finding `json:"findings"`
 	Stats    Stats     `json:"stats"`
-}
-
-// Stats holds scan statistics
-type Stats struct {
-	FilesScanned   int           `json:"files_scanned"`
-	FilesSkipped   int           `json:"files_skipped"`
-	Findings       int           `json:"findings"`
-	DurationMs     int           `json:"duration_ms"`
-	BytesScanned   int64         `json:"bytes_scanned"`
-	MemoryUsage    int64         `json:"memory_usage"`
-	ValidationTime time.Duration `json:"validation_time"`
 }
 
 // ScanConfig holds configuration for scanning

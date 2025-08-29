@@ -126,11 +126,12 @@ func writeSummary(res *types.Result) {
 	fmt.Printf("   Files Scanned: %d\n", res.Stats.FilesScanned)
 	fmt.Printf("   Files Skipped: %d\n", res.Stats.FilesSkipped)
 	fmt.Printf("   Secrets Found: %s\n", red(fmt.Sprintf("%d", res.Stats.Findings)))
-	fmt.Printf("   Duration: %.2fs\n", float64(res.Stats.DurationMs)/1000)
+	fmt.Printf("   Duration: %.2fs\n", float64(res.Stats.Duration)/1000)
 
-	if res.Stats.ValidationTime > 0 {
-		fmt.Printf("   Validation Time: %.2fs\n", res.Stats.ValidationTime.Seconds())
-	}
+	// TODO does this exist bhai
+	// if res.Stats.ValidationTime > 0 {
+	// 	fmt.Printf("   Validation Time: %.2fs\n", res.Stats.ValidationTime.Seconds())
+	// }
 
 	// Group findings by severity
 	high, medium, low := 0, 0, 0

@@ -1,10 +1,8 @@
 package scanner
 
 import (
-	"strings"
-
-	"github.com/sharmajid16/netra/internal/git"
-	"github.com/sharmajid16/netra/pkg/types"
+	"github.com/sharmajidotdev/netra/internal/git"
+	"github.com/sharmajidotdev/netra/pkg/types"
 )
 
 // DiffScanner scans git diffs for secrets
@@ -49,46 +47,48 @@ func (ds *DiffScanner) ScanCommitRange(repoPath, fromCommit, toCommit string) (*
 // scanDiffFiles scans a list of diff files for secrets
 func (ds *DiffScanner) scanDiffFiles(files []*git.DiffFile) (*types.Result, error) {
 	result := &types.Result{
-		Stats: &types.Stats{},
+		// Stats: &Stats{},
 	}
 
-	for _, file := range files {
-		// Skip binary files
-		if file.IsBinary {
-			result.Stats.FilesSkipped++
-			continue
-		}
+	// TODO: Implement scanning of diff files
 
-		// Reconstruct the content from added/context lines
-		var content strings.Builder
-		lineMap := make(map[int]int) // Maps file line numbers to content line numbers
-		currentLine := 1
+	// for _, file := range files {
+	// 	// Skip binary files
+	// 	if file.IsBinary {
+	// 		result.Stats.FilesSkipped++
+	// 		continue
+	// 	}
 
-		for _, line := range file.Lines {
-			if line.Type != git.Deleted {
-				lineMap[line.Number] = currentLine
-				content.WriteString(line.Content)
-				content.WriteRune('\n')
-				currentLine++
-			}
-		}
+	// 	// Reconstruct the content from added/context lines
+	// 	var content strings.Builder
+	// 	lineMap := make(map[int]int) // Maps file line numbers to content line numbers
+	// 	currentLine := 1
 
-		// Scan the reconstructed content
-		findings, err := ds.scanner.scanContent(file.Path, content.String())
-		if err != nil {
-			return nil, err
-		}
+	// 	for _, line := range file.Lines {
+	// 		if line.Type != git.Deleted {
+	// 			lineMap[line.Number] = currentLine
+	// 			content.WriteString(line.Content)
+	// 			content.WriteRune('\n')
+	// 			currentLine++
+	// 		}
+	// 	}
 
-		// Update line numbers based on the diff
-		for i := range findings {
-			if newLine, ok := lineMap[findings[i].Line]; ok {
-				findings[i].Line = newLine
-			}
-		}
+	// 	// Scan the reconstructed content
+	// 	findings, err := ds.scanner.scanContent(file.Path, content.String())
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		result.Findings = append(result.Findings, findings...)
-		result.Stats.FilesScanned++
-	}
+	// 	// Update line numbers based on the diff
+	// 	for i := range findings {
+	// 		if newLine, ok := lineMap[findings[i].Line]; ok {
+	// 			findings[i].Line = newLine
+	// 		}
+	// 	}
+
+	// 	result.Findings = append(result.Findings, findings...)
+	// 	result.Stats.FilesScanned++
+	// }
 
 	return result, nil
 }

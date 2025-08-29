@@ -10,40 +10,30 @@ import (
 
 // JSONOutput represents the JSON output structure
 type JSONOutput struct {
-	Schema      string         `json:"$schema"`
-	Version     string         `json:"version"`
-	Timestamp   string         `json:"timestamp"`
-	Scanner     ScannerInfo    `json:"scanner"`
-	Statistics  types.Stats    `json:"statistics"`
-	RiskSummary RiskSummary    `json:"risk_summary"`
+	Schema      string          `json:"$schema"`
+	Version     string          `json:"version"`
+	Timestamp   string          `json:"timestamp"`
+	Scanner     ScannerInfo     `json:"scanner"`
+	Statistics  types.Stats     `json:"statistics"`
+	RiskSummary RiskSummary     `json:"risk_summary"`
 	Findings    []types.Finding `json:"findings"`
 }
 
 // ScannerInfo represents scanner metadata
 type ScannerInfo struct {
-	Name      string   `json:"name"`
-	Version   string   `json:"version"`
-	Rules     []string `json:"enabled_rules"`
-	Options   Options  `json:"options"`
-}
-
-// Options represents scanner options
-type Options struct {
-	LLM        bool  `json:"llm_enabled"`
-	MaxDepth   int   `json:"max_depth"`
-	Threads    int   `json:"threads"`
-	MaxSize    int64 `json:"max_file_size"`
-	SkipGit    bool  `json:"skip_git"`
-	SkipVendor bool  `json:"skip_vendor"`
+	Name    string   `json:"name"`
+	Version string   `json:"version"`
+	Rules   []string `json:"enabled_rules"`
+	Options Options  `json:"options"`
 }
 
 // RiskSummary represents risk statistics
 type RiskSummary struct {
-	TotalFindings int            `json:"total_findings"`
-	BySeverity    map[string]int `json:"by_severity"`
-	ByCategory    map[string]int `json:"by_category"`
-	Validated     int            `json:"validated_findings"`
-	FalsePositives int           `json:"false_positives"`
+	TotalFindings  int            `json:"total_findings"`
+	BySeverity     map[string]int `json:"by_severity"`
+	ByCategory     map[string]int `json:"by_category"`
+	Validated      int            `json:"validated_findings"`
+	FalsePositives int            `json:"false_positives"`
 }
 
 // ToJSON converts scan results to enhanced JSON format
@@ -71,21 +61,11 @@ func ToJSON(res *types.Result, version string, opts *Options) ([]byte, error) {
 	return json.MarshalIndent(output, "", "  ")
 }
 
-// WriteJSON writes JSON output to stdout
-package output
-
-import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/sharmajid16/netra/pkg/types"
-)
-
 // WriteJSON outputs scan results in JSON format
 func WriteJSON(result *types.Result, version string, opts *Options) error {
 	output := map[string]interface{}{
-		"version":  version,
-		"results":  result,
+		"version": version,
+		"results": result,
 	}
 
 	if opts != nil {
@@ -104,7 +84,7 @@ func WriteJSON(result *types.Result, version string, opts *Options) error {
 // calculateRiskSummary generates risk statistics
 func calculateRiskSummary(findings []types.Finding) RiskSummary {
 	summary := RiskSummary{
-		TotalFindings:  len(findings),
+		TotalFindings: len(findings),
 		BySeverity:    make(map[string]int),
 		ByCategory:    make(map[string]int),
 	}

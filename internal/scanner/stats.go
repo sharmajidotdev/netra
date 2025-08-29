@@ -3,24 +3,24 @@ package scanner
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/sharmajidotdev/netra/pkg/types"
 )
 
-// Stats tracks scanning statistics
-type Stats struct {
-	FilesScanned int32
-	FilesSkipped int32
-	BytesScanned int64
-	Findings     int32
-	Duration     int64
+// scanStats is a wrapper around types.Stats that adds atomic operations
+type scanStats struct {
+	*types.Stats
 }
 
 // newStats creates new statistics tracker
-func newStats() *Stats {
-	return &Stats{}
+func newStats() *scanStats {
+	return &scanStats{
+		Stats: &types.Stats{},
+	}
 }
 
 // reset resets all statistics to zero
-func (s *Stats) reset() {
+func (s *scanStats) reset() {
 	atomic.StoreInt32(&s.FilesScanned, 0)
 	atomic.StoreInt32(&s.FilesSkipped, 0)
 	atomic.StoreInt64(&s.BytesScanned, 0)
@@ -29,32 +29,32 @@ func (s *Stats) reset() {
 }
 
 // addFileScanned increments scanned files counter
-func (s *Stats) addFileScanned() {
+func (s *scanStats) addFileScanned() {
 	atomic.AddInt32(&s.FilesScanned, 1)
 }
 
 // addFileSkipped increments skipped files counter
-func (s *Stats) addFileSkipped() {
+func (s *scanStats) addFileSkipped() {
 	atomic.AddInt32(&s.FilesSkipped, 1)
 }
 
 // addBytesScanned adds to the total bytes scanned
-func (s *Stats) addBytesScanned(n int64) {
+func (s *scanStats) addBytesScanned(n int64) {
 	atomic.AddInt64(&s.BytesScanned, n)
 }
 
 // addFindings increments findings counter
-func (s *Stats) addFindings(n int) {
+func (s *scanStats) addFindings(n int) {
 	atomic.AddInt32(&s.Findings, int32(n))
 }
 
 // setDuration sets the total scan duration
-func (s *Stats) setDuration(d time.Duration) {
+func (s *scanStats) setDuration(d time.Duration) {
 	atomic.StoreInt64(&s.Duration, int64(d))
 }
 
 // toMap converts stats to a map for reporting
-func (s *Stats) toMap() map[string]interface{} {
+func (s *scanStats) toMap() map[string]interface{} {
 	return map[string]interface{}{
 		"files_scanned": atomic.LoadInt32(&s.FilesScanned),
 		"files_skipped": atomic.LoadInt32(&s.FilesSkipped),

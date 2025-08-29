@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sharmajid16/netra/internal/config"
-	"github.com/sharmajid16/netra/internal/exitcode"
-	"github.com/sharmajid16/netra/internal/output"
-	"github.com/sharmajid16/netra/internal/scanner"
-	"github.com/sharmajid16/netra/pkg/types"
+	"github.com/sharmajidotdev/netra/internal/config"
+	"github.com/sharmajidotdev/netra/internal/exitcode"
+	"github.com/sharmajidotdev/netra/internal/output"
+	"github.com/sharmajidotdev/netra/internal/scanner"
+	"github.com/sharmajidotdev/netra/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -255,7 +255,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 	var result *types.Result
 	var err error
 
-	// Handle different scan modes
+	// Handle different scan modes TODO: re-enable diff file scanning
 	if opts.DiffFile != "" {
 		// Diff file scanning mode
 		diffScanner := scanner.NewDiffScanner(scannerOpts...)
@@ -363,12 +363,12 @@ func generateOutput(result *types.Result) error {
 			return fmt.Errorf("generating JSON output: %w", err)
 		}
 		fmt.Println(string(data))
-	case opts.Sarif:
-		data, err := output.ToSARIF(result, version)
-		if err != nil {
-			return fmt.Errorf("generating SARIF output: %w", err)
-		}
-		fmt.Println(string(data))
+	// case opts.Sarif:
+	// 	data, err := output.ToSARIF(result, version)
+	// 	if err != nil {
+	// 		return fmt.Errorf("generating SARIF output: %w", err)
+	// 	}
+	// 	fmt.Println(string(data))
 	default:
 		if err := output.WriteHuman(result, opts.Explain); err != nil {
 			return fmt.Errorf("generating human output: %w", err)

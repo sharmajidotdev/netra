@@ -93,14 +93,15 @@ func showProgressBar(current, total int) {
 // showSummary displays a summary of the scan results
 func showSummary(result *types.Result) {
 	fmt.Printf("\n\n📊 Scan Summary:\n")
-	fmt.Printf("   Files Scanned: %d\n", result.Stats.FilesScanned)
-	fmt.Printf("   Files Skipped: %d\n", result.Stats.FilesSkipped)
-	fmt.Printf("   Secrets Found: %s\n", red(result.Stats.Findings))
-	fmt.Printf("   Duration: %.2fs\n", float64(result.Stats.DurationMs)/1000)
+	// TODO : stats enable karo
+	// fmt.Printf("   Files Scanned: %d\n", result.Stats.FilesScanned)
+	// fmt.Printf("   Files Skipped: %d\n", result.Stats.FilesSkipped)
+	// fmt.Printf("   Secrets Found: %s\n", red(result.Stats.Findings))
+	// fmt.Printf("   Duration: %.2fs\n", float64(result.Stats.DurationMs)/1000)
 
-	if result.Stats.ValidationTime > 0 {
-		fmt.Printf("   Validation Time: %.2fs\n", result.Stats.ValidationTime.Seconds())
-	}
+	// if result.Stats.ValidationTime > 0 {
+	// 	fmt.Printf("   Validation Time: %.2fs\n", result.Stats.ValidationTime.Seconds())
+	// }
 
 	// Group findings by severity
 	high, medium, low := 0, 0, 0
@@ -115,28 +116,30 @@ func showSummary(result *types.Result) {
 		}
 	}
 
-	if result.Stats.Findings > 0 {
-		fmt.Printf("\n   By Severity:\n")
-		if high > 0 {
-			fmt.Printf("   - %s: %d\n", red("HIGH"), high)
-		}
-		if medium > 0 {
-			fmt.Printf("   - %s: %d\n", yellow("MEDIUM"), medium)
-		}
-		if low > 0 {
-			fmt.Printf("   - %s: %d\n", blue("LOW"), low)
-		}
-	}
+	// TODO : stats enable karo
+	// if result.Stats.Findings > 0 {
+	// 	fmt.Printf("\n   By Severity:\n")
+	// 	if high > 0 {
+	// 		fmt.Printf("   - %s: %d\n", red("HIGH"), high)
+	// 	}
+	// 	if medium > 0 {
+	// 		fmt.Printf("   - %s: %d\n", yellow("MEDIUM"), medium)
+	// 	}
+	// 	if low > 0 {
+	// 		fmt.Printf("   - %s: %d\n", blue("LOW"), low)
+	// 	}
+	// }
 }
 
 // showBanner displays the tool banner
 func showBanner() {
 	banner := `
-    _   __    __           
-   / | / /___/ /__________ 
-  /  |/ / __  / ___/ ___/ 
- / /|  / /_/ / /  / /     
-/_/ |_/\__,_/_/  /_/      
+    _   __         __                 
+   / | / /  ___   / /_   _____  ____ 
+  /  |/ /  / _ \ / __/  / ___/ / __ \/
+ / /|  /  /  __// /_   / /    / /_/ / 
+/_/ |_/   \___/ \__/  /_/     \__,_/  
+                                      
                           
 `
 	fmt.Print(blue(banner))

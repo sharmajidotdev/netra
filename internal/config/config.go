@@ -71,7 +71,7 @@ func DefaultConfig() *Config {
 
 	// Default LLM settings
 	cfg.LLM.Provider = "openai"
-	cfg.LLM.Model = "gpt-4"
+	cfg.LLM.Model = "gpt-5"
 	cfg.LLM.Enabled = false
 	cfg.LLM.Explain = false
 
