@@ -91,6 +91,31 @@ func init() {
 	configCmd.AddCommand(initConfigCmd)
 	rootCmd.AddCommand(configCmd)
 
+	// Create and add scan command
+	scanCmd := &cobra.Command{
+		Use:   "scan [flags] [paths...]",
+		Short: "Scan files and directories for secrets",
+		Long: `Scan files and directories for potential secrets, credentials, API keys
+and other sensitive information.
+
+Scan Modes:
+  1. Regular file scanning:
+     netra scan [paths...]
+  
+  2. Scan a diff file:
+     netra scan --diff-file path/to/changes.diff
+  
+  3. Scan git commit range:
+     netra scan --commit-range HEAD~1..HEAD
+  
+  4. Scan staged changes:
+     netra scan --staged`,
+		RunE: runScan,
+		Args: cobra.ArbitraryArgs,
+	}
+
+	rootCmd.AddCommand(scanCmd)
+
 	// Input flags
 	rootCmd.Flags().StringVarP(&opts.DiffFile, "diff", "d", "", "Scan a git diff file")
 
