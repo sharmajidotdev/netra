@@ -295,13 +295,14 @@ func runScan(cmd *cobra.Command, args []string) error {
 func initConfig(cmd *cobra.Command, args []string) error {
 	defaultConfig := config.DefaultConfig()
 
-	// Default to $HOME/.netra.yaml
-	home, err := os.UserHomeDir()
+	// Get the directory where the binary is located
+	exePath, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("getting home directory: %w", err)
+		return fmt.Errorf("getting executable path: %w", err)
 	}
+	binDir := filepath.Dir(exePath)
 
-	configPath := filepath.Join(home, ".netra.yaml")
+	configPath := filepath.Join(binDir, ".netra.yaml")
 	if _, err := os.Stat(configPath); err == nil {
 		return fmt.Errorf("config file already exists at %s", configPath)
 	}
