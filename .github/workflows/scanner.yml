@@ -13,13 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
-      - name: list all files
-        run: ls -alh
-
-      - name: Fetch all commits
-        run: git fetch --all
+      - name: Debug GitHub Context
+        run: |
+          echo "GITHUB_SHA: ${{ github.sha }}"
+          echo "GITHUB_EVENT_BEFORE: ${{ github.event.before }}"
 
       - name: Run netra scan on each file
         run: |
