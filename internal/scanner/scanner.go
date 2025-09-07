@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sharmajidotdev/netra/internal/llm"
+	"github.com/sharmajidotdev/netra/internal/logger"
 	"github.com/sharmajidotdev/netra/pkg/types"
 )
 
@@ -89,11 +90,13 @@ func (s *Scanner) Scan(ctx context.Context, inputs ...string) (*types.Result, er
 	errChan := make(chan error, 1)
 
 	// Start worker pool
+	logger.Debug("Starting %d scanner workers", s.workers)
 	var wg sync.WaitGroup
 	for i := 0; i < s.workers; i++ {
 		wg.Add(1)
 		go s.worker(ctx, &wg, jobs, results, errChan)
 	}
+	logger.Debug("All workers started")
 
 	// Send jobs to workers
 	go func() {
@@ -130,7 +133,9 @@ func (s *Scanner) Scan(ctx context.Context, inputs ...string) (*types.Result, er
 	// Apply LLM validation if enabled
 	if s.mlConfig != nil && s.mlConfig.Enabled && len(allFindings) > 0 {
 		validationStart := time.Now()
-		allFindings = llm.Filter(ctx, allFindings, true)
+		// Create new context with LLM config
+		llmCtx := context.WithValue(ctx, llm.ConfigKey, s.mlConfig)
+		allFindings = llm.Filter(llmCtx, allFindings, true)
 		result.Stats.ValidationTime = time.Since(validationStart)
 	}
 

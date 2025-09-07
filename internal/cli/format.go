@@ -94,14 +94,14 @@ func showProgressBar(current, total int) {
 func showSummary(result *types.Result) {
 	fmt.Printf("\n\n📊 Scan Summary:\n")
 	// TODO : stats enable karo
-	// fmt.Printf("   Files Scanned: %d\n", result.Stats.FilesScanned)
-	// fmt.Printf("   Files Skipped: %d\n", result.Stats.FilesSkipped)
-	// fmt.Printf("   Secrets Found: %s\n", red(result.Stats.Findings))
-	// fmt.Printf("   Duration: %.2fs\n", float64(result.Stats.DurationMs)/1000)
+	fmt.Printf("   Files Scanned: %d\n", result.Stats.FilesScanned)
+	fmt.Printf("   Files Skipped: %d\n", result.Stats.FilesSkipped)
+	fmt.Printf("   Secrets Found: %s\n", red(result.Stats.Findings))
+	fmt.Printf("   Duration: %.2fs\n", float64(result.Stats.Duration)/1000)
 
-	// if result.Stats.ValidationTime > 0 {
-	// 	fmt.Printf("   Validation Time: %.2fs\n", result.Stats.ValidationTime.Seconds())
-	// }
+	if result.Stats.ValidationTime > 0 {
+		fmt.Printf("   Validation Time: %.2fs\n", result.Stats.ValidationTime.Seconds())
+	}
 
 	// Group findings by severity
 	high, medium, low := 0, 0, 0
@@ -117,18 +117,18 @@ func showSummary(result *types.Result) {
 	}
 
 	// TODO : stats enable karo
-	// if result.Stats.Findings > 0 {
-	// 	fmt.Printf("\n   By Severity:\n")
-	// 	if high > 0 {
-	// 		fmt.Printf("   - %s: %d\n", red("HIGH"), high)
-	// 	}
-	// 	if medium > 0 {
-	// 		fmt.Printf("   - %s: %d\n", yellow("MEDIUM"), medium)
-	// 	}
-	// 	if low > 0 {
-	// 		fmt.Printf("   - %s: %d\n", blue("LOW"), low)
-	// 	}
-	// }
+	if result.Stats.Findings > 0 {
+		fmt.Printf("\n   By Severity:\n")
+		if high > 0 {
+			fmt.Printf("   - %s: %d\n", red("HIGH"), high)
+		}
+		if medium > 0 {
+			fmt.Printf("   - %s: %d\n", yellow("MEDIUM"), medium)
+		}
+		if low > 0 {
+			fmt.Printf("   - %s: %d\n", blue("LOW"), low)
+		}
+	}
 }
 
 // showBanner displays the tool banner

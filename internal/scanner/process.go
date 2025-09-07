@@ -9,13 +9,18 @@ import (
 	"strings"
 
 	"github.com/sharmajidotdev/netra/internal/detect"
+	"github.com/sharmajidotdev/netra/internal/llm"
+	"github.com/sharmajidotdev/netra/internal/logger"
 	"github.com/sharmajidotdev/netra/pkg/types"
 )
 
 // scanFile processes a single file for secrets
 func (s *Scanner) scanFile(ctx context.Context, path string) ([]types.Finding, error) {
+	logger.Debug("Scanning file: %s", path)
+
 	// Check if file should be skipped
 	if s.shouldSkipFile(path) {
+		logger.Debug("Skipping file: %s", path)
 		s.stats.addFileSkipped()
 		return nil, nil
 	}
@@ -129,10 +134,16 @@ func (s *Scanner) shouldSkipFile(path string) bool {
 
 // validateWithLLM uses LLM to validate and explain findings
 func (s *Scanner) validateWithLLM(ctx context.Context, findings []types.Finding) []types.Finding {
-	// TODO: Implement LLM validation
-	// 1. Batch findings to reduce API calls
-	// 2. Generate prompts for validation
-	// 3. Call LLM service
-	// 4. Update findings with validation results
-	return findings
+	if len(findings) == 0 {
+		return findings
+	}
+
+	logger.Info("Validating %d findings with LLM", len(findings))
+
+	// Get LLM to validate findings
+	// Always include explanations for better context and analysis
+	validatedFindings := llm.Filter(ctx, findings, true)
+
+	logger.Debug("LLM validation complete. %d findings after validation", len(validatedFindings))
+	return validatedFindings
 }

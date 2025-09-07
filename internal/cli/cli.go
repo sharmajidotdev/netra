@@ -9,6 +9,7 @@ import (
 
 	"github.com/sharmajidotdev/netra/internal/config"
 	"github.com/sharmajidotdev/netra/internal/exitcode"
+	"github.com/sharmajidotdev/netra/internal/logger"
 	"github.com/sharmajidotdev/netra/internal/output"
 	"github.com/sharmajidotdev/netra/internal/scanner"
 	"github.com/sharmajidotdev/netra/pkg/types"
@@ -49,6 +50,7 @@ type Options struct {
 	SkipGit     bool
 	SkipVendor  bool
 	Threads     int
+	LogLevel    string
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -91,28 +93,58 @@ func init() {
 	configCmd.AddCommand(initConfigCmd)
 	rootCmd.AddCommand(configCmd)
 
+	// Create and add scan command
+	scanCmd := &cobra.Command{
+		Use:   "scan [flags] [paths...]",
+		Short: "Scan files and directories for secrets",
+		Long: `Scan files and directories for potential secrets, credentials, API keys
+and other sensitive information.
+
+Scan Modes:
+  1. Regular file scanning:
+     netra scan [paths...]
+  
+  2. Scan a diff file:
+     netra scan --diff-file path/to/changes.diff
+  
+  3. Scan git commit range:
+     netra scan --commit-range HEAD~1..HEAD
+  
+  4. Scan staged changes:
+     netra scan --staged`,
+		RunE: runScan,
+		Args: cobra.ArbitraryArgs,
+	}
+
+	// Add all scan-related flags to scanCmd
+
 	// Input flags
-	rootCmd.Flags().StringVarP(&opts.DiffFile, "diff", "d", "", "Scan a git diff file")
+	scanCmd.Flags().StringVarP(&opts.DiffFile, "diff", "d", "", "Scan a git diff file")
 
 	// Output flags
-	rootCmd.Flags().BoolVar(&opts.Json, "json", false, "Output results in JSON format")
-	rootCmd.Flags().BoolVarP(&opts.Human, "human", "H", true, "Output results in human-readable format")
-	rootCmd.Flags().BoolVar(&opts.Sarif, "sarif", false, "Output results in SARIF format")
-	rootCmd.Flags().StringVar(&opts.ExitOn, "exit-on", "high", "Exit with code 1 on finding severity [high|medium|low]")
+	scanCmd.Flags().BoolVar(&opts.Json, "json", false, "Output results in JSON format")
+	scanCmd.Flags().BoolVarP(&opts.Human, "human", "H", true, "Output results in human-readable format")
+	scanCmd.Flags().BoolVar(&opts.Sarif, "sarif", false, "Output results in SARIF format")
+	scanCmd.Flags().StringVar(&opts.ExitOn, "exit-on", "high", "Exit with code 1 on finding severity [high|medium|low]")
 
 	// Scanning flags
-	rootCmd.Flags().IntVar(&opts.MaxDepth, "max-depth", 10, "Maximum directory depth to scan")
-	rootCmd.Flags().BoolVar(&opts.SkipGit, "skip-git", true, "Skip .git directories")
-	rootCmd.Flags().BoolVar(&opts.SkipVendor, "skip-vendor", true, "Skip vendor and node_modules directories")
-	rootCmd.Flags().IntVar(&opts.Threads, "threads", 4, "Number of concurrent scanning threads")
-	rootCmd.Flags().Int64Var(&opts.MaxFileSize, "max-file-size", 1024*1024, "Maximum file size to scan in bytes")
+	scanCmd.Flags().IntVar(&opts.MaxDepth, "max-depth", 10, "Maximum directory depth to scan")
+	scanCmd.Flags().BoolVar(&opts.SkipGit, "skip-git", true, "Skip .git directories")
+	scanCmd.Flags().BoolVar(&opts.SkipVendor, "skip-vendor", true, "Skip vendor and node_modules directories")
+	scanCmd.Flags().IntVar(&opts.Threads, "threads", 4, "Number of concurrent scanning threads")
+	scanCmd.Flags().Int64Var(&opts.MaxFileSize, "max-file-size", 1024*1024, "Maximum file size to scan in bytes")
 
 	// LLM flags
-	rootCmd.Flags().BoolVarP(&opts.LLM, "llm", "l", false, "Use LLM to validate findings")
-	rootCmd.Flags().StringVar(&opts.LLMProvider, "llm-provider", "openai", "LLM provider [openai]")
-	rootCmd.Flags().StringVar(&opts.LLMModel, "llm-model", "gpt-4", "LLM model to use")
-	rootCmd.Flags().StringVar(&opts.LLMApiKey, "llm-api-key", "", "LLM API key")
-	rootCmd.Flags().BoolVarP(&opts.Explain, "explain", "e", false, "Include explanations in output")
+	scanCmd.Flags().BoolVarP(&opts.LLM, "llm", "l", false, "Use LLM to validate findings")
+	scanCmd.Flags().StringVar(&opts.LLMProvider, "llm-provider", "openai", "LLM provider [openai]")
+	scanCmd.Flags().StringVar(&opts.LLMModel, "llm-model", "gpt-4", "LLM model to use")
+	scanCmd.Flags().StringVar(&opts.LLMApiKey, "llm-api-key", "", "LLM API key")
+	scanCmd.Flags().BoolVarP(&opts.Explain, "explain", "e", false, "Include explanations in output")
+
+	rootCmd.AddCommand(scanCmd)
+
+	// Logging flags
+	scanCmd.Flags().StringVar(&opts.LogLevel, "log-level", "info", "Set logging level (debug, info, warn, error)")
 
 	// Config file
 	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.netra.yaml)")
@@ -213,6 +245,47 @@ func Execute() {
 
 // runScan performs the actual scanning operation
 func runScan(cmd *cobra.Command, args []string) error {
+	// Set up logging
+	logger.SetLevel(logger.ParseLevel(opts.LogLevel))
+	logger.Debug("Debug logging enabled")
+
+	// Log all configuration details
+	logger.Info("Starting scan with the following configuration:")
+	logger.Info("Input Configuration:")
+	if opts.DiffFile != "" {
+		logger.Info("  - Scan Mode: Diff file scanning")
+		logger.Info("  - Diff File: %s", opts.DiffFile)
+	} else if opts.CommitRange != "" {
+		logger.Info("  - Scan Mode: Commit range scanning")
+		logger.Info("  - Commit Range: %s", opts.CommitRange)
+	} else if opts.StagedOnly {
+		logger.Info("  - Scan Mode: Staged changes scanning")
+	} else {
+		logger.Info("  - Scan Mode: Regular file scanning")
+		logger.Info("  - Target Paths: %v", args)
+	}
+
+	logger.Info("Scan Configuration:")
+	logger.Info("  - Max Depth: %d", opts.MaxDepth)
+	logger.Info("  - Max File Size: %d bytes", opts.MaxFileSize)
+	logger.Info("  - Skip Git: %v", opts.SkipGit)
+	logger.Info("  - Skip Vendor: %v", opts.SkipVendor)
+	logger.Info("  - Threads: %d", opts.Threads)
+
+	logger.Info("Output Configuration:")
+	logger.Info("  - JSON Output: %v", opts.Json)
+	logger.Info("  - Human Output: %v", opts.Human)
+	logger.Info("  - SARIF Output: %v", opts.Sarif)
+	logger.Info("  - Exit On: %s", opts.ExitOn)
+
+	if opts.LLM {
+		logger.Info("LLM Configuration:")
+		logger.Info("  - Provider: %s", opts.LLMProvider)
+		logger.Info("  - Model: %s", opts.LLMModel)
+		logger.Info("  - Explain: %v", opts.Explain)
+		logger.Debug("  - API Key Length: %d", len(opts.LLMApiKey)) // Don't log the actual key
+	}
+
 	// Create scanner configuration
 	scanConfig := &types.ScanConfig{
 		MaxDepth:    opts.MaxDepth,
@@ -295,13 +368,14 @@ func runScan(cmd *cobra.Command, args []string) error {
 func initConfig(cmd *cobra.Command, args []string) error {
 	defaultConfig := config.DefaultConfig()
 
-	// Default to $HOME/.netra.yaml
-	home, err := os.UserHomeDir()
+	// Get the directory where the binary is located
+	exePath, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("getting home directory: %w", err)
+		return fmt.Errorf("getting executable path: %w", err)
 	}
+	binDir := filepath.Dir(exePath)
 
-	configPath := filepath.Join(home, ".netra.yaml")
+	configPath := filepath.Join(binDir, ".netra.yaml")
 	if _, err := os.Stat(configPath); err == nil {
 		return fmt.Errorf("config file already exists at %s", configPath)
 	}

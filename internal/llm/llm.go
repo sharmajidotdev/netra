@@ -1,15 +1,18 @@
 package llm
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/sharmajidotdev/netra/internal/logger"
 	"github.com/sharmajidotdev/netra/pkg/types"
 )
 
@@ -51,18 +54,22 @@ func New(config *types.MLConfig) *Validator {
 
 // Filter applies LLM filtering to findings
 func Filter(ctx context.Context, in []types.Finding, explain bool) []types.Finding {
-	// Create default config if none provided
-	config := &types.MLConfig{
-		Enabled:     true,
-		Provider:    "openai",
-		Model:       "gpt-4",
-		MaxTokens:   1000,
-		Temperature: 0.1,
-		Threshold:   0.8,
-		CacheSize:   1000,
+	// Get LLM config from context or scanner instance
+	config, ok := GetConfigFromContext(ctx)
+	if !ok || config == nil {
+		logger.Debug("no LLM config found in context, falling back to defaults")
+		config = &types.MLConfig{
+			Enabled:     true,
+			Provider:    "openai",
+			Model:       "gpt-4",
+			MaxTokens:   1000,
+			Temperature: 0.1,
+			Threshold:   0.8,
+			CacheSize:   1000,
+		}
 	}
 
-	// Create validator
+	// Create validator with the config
 	v := New(config)
 
 	// Validate findings
@@ -156,8 +163,8 @@ func (v *Validator) buildPrompt(findings []types.Finding) string {
 }
 
 // callLLM makes the API call to the LLM service
+// callLLM makes the API call to the LLM service
 func (v *Validator) callLLM(ctx context.Context, prompt string) (*ValidationResult, error) {
-	// Prepare the request based on the provider
 	var url string
 	var reqBody interface{}
 
@@ -179,6 +186,38 @@ func (v *Validator) callLLM(ctx context.Context, prompt string) (*ValidationResu
 			"temperature": v.config.Temperature,
 			"max_tokens":  v.config.MaxTokens,
 		}
+
+	case "anthropic":
+		url = "https://api.anthropic.com/v1/messages"
+		reqBody = map[string]interface{}{
+			"model":       v.config.Model, // e.g. "claude-3-5-sonnet-20240620"
+			"max_tokens":  v.config.MaxTokens,
+			"temperature": v.config.Temperature,
+			"messages": []map[string]string{
+				{
+					"role":    "user",
+					"content": prompt,
+				},
+			},
+		}
+
+	case "ollama":
+		url = "http://localhost:11434/api/generate" // assumes local Ollama server
+
+		// Simplified prompt for Ollama
+		simplifiedPrompt := fmt.Sprintf(`You are a security expert. Analyze if this is a real secret or not.
+Content to analyze: %s
+
+Answer with either 'Yes, this is a secret because...' or 'No, this is not a secret because...'`, prompt)
+
+		reqBody = map[string]interface{}{
+			"model":       v.config.Model,
+			"prompt":      simplifiedPrompt,
+			"stream":      true,
+			"temperature": v.config.Temperature,
+			"system":      "You are a security expert analyzing potential secrets in code.",
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", v.config.Provider)
 	}
@@ -194,10 +233,17 @@ func (v *Validator) callLLM(ctx context.Context, prompt string) (*ValidationResu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-
-	// Add headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", v.config.APIKey))
+
+	// Different auth headers depending on provider
+	switch v.config.Provider {
+	case "openai":
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", v.config.APIKey))
+	case "anthropic":
+		req.Header.Set("x-api-key", v.config.APIKey)
+		req.Header.Set("anthropic-version", "2023-06-01")
+		// Ollama runs locally — no API key required
+	}
 
 	// Make request
 	resp, err := v.client.Do(req)
@@ -206,27 +252,107 @@ func (v *Validator) callLLM(ctx context.Context, prompt string) (*ValidationResu
 	}
 	defer resp.Body.Close()
 
-	// Parse response
-	var openAIResp OpenAIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&openAIResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	// Read the full response body
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Parse the JSON response from the LLM
+	// Log the actual response content
+	// logger.Info("llm response: %s", string(bodyBytes))
+
+	// Create a new reader with the body content for further processing
+	resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+	// Parse response depending on provider
+	var rawContent string
+	switch v.config.Provider {
+	case "openai":
+		var openAIResp OpenAIResponse
+		if err := json.NewDecoder(resp.Body).Decode(&openAIResp); err != nil {
+			return nil, fmt.Errorf("failed to decode OpenAI response: %w", err)
+		}
+		if len(openAIResp.Choices) == 0 {
+			return nil, fmt.Errorf("no choices returned from OpenAI")
+		}
+		rawContent = openAIResp.Choices[0].Message.Content
+
+	case "anthropic":
+		var anthResp struct {
+			Content []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&anthResp); err != nil {
+			return nil, fmt.Errorf("failed to decode Anthropic response: %w", err)
+		}
+		if len(anthResp.Content) == 0 {
+			return nil, fmt.Errorf("no content returned from Anthropic")
+		}
+		rawContent = anthResp.Content[0].Text
+
+	case "ollama":
+		var fullResponse strings.Builder
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				continue
+			}
+
+			var ollamaResp struct {
+				Response string `json:"response"`
+				Done     bool   `json:"done"`
+			}
+
+			if err := json.Unmarshal([]byte(line), &ollamaResp); err != nil {
+				return nil, fmt.Errorf("failed to parse Ollama response line: %w", err)
+			}
+
+			fullResponse.WriteString(ollamaResp.Response)
+		}
+
+		if err := scanner.Err(); err != nil {
+			return nil, fmt.Errorf("failed to read Ollama response: %w", err)
+		}
+
+		rawContent = fullResponse.String()
+		if rawContent == "" {
+			return nil, fmt.Errorf("no response received from Ollama")
+		}
+
+		// Create a simple validation result since Ollama might not return in our exact format
+		isSecret := strings.Contains(strings.ToLower(rawContent), "true") ||
+			strings.Contains(strings.ToLower(rawContent), "yes") ||
+			strings.Contains(strings.ToLower(rawContent), "is a secret")
+
+		return &ValidationResult{
+			IsSecret:    isSecret,
+			Confidence:  0.8, // Default confidence
+			Explanation: rawContent,
+			Timestamp:   time.Now(),
+		}, nil
+	}
+
+	// For OpenAI and Anthropic, try to parse structured response first
 	var result struct {
 		Findings []ValidationResult `json:"findings"`
 	}
-
-	if err := json.Unmarshal([]byte(openAIResp.Choices[0].Message.Content), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w", err)
+	if err := json.Unmarshal([]byte(rawContent), &result); err == nil && len(result.Findings) > 0 {
+		return &result.Findings[0], nil
 	}
 
-	// Return the first result (we'll process one batch at a time)
-	if len(result.Findings) == 0 {
-		return nil, fmt.Errorf("no validation results returned")
-	}
+	// Fallback to simpler parsing if structured response fails
+	isSecret := strings.Contains(strings.ToLower(rawContent), "true") ||
+		strings.Contains(strings.ToLower(rawContent), "yes") ||
+		strings.Contains(strings.ToLower(rawContent), "is a secret")
 
-	return &result.Findings[0], nil
+	return &ValidationResult{
+		IsSecret:    isSecret,
+		Confidence:  0.8, // Default confidence
+		Explanation: rawContent,
+		Timestamp:   time.Now(),
+	}, nil
 }
 
 // getCached retrieves a cached validation result
