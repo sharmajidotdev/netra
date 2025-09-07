@@ -134,6 +134,10 @@ patterns:
 * [ ] Homebrew/Linuxbrew package
 * [ ] VSCode extension
 
+## Next Steps
+* [ ] Integrate CI / CD pipeline on push action
+* [ ] Dashboard UI to show the data breaches - fixes - throw to JIRA, etc
+
 ---
 
 ## Contributing
