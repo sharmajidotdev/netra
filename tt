@@ -1,0 +1,39 @@
+# test_secrets.py
+
+import requests
+
+API_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"  
+GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef1234"
+PASSWORD = "P@ssw0rd123!" 
+SECRET_KEY = "thisisaverysecretkey1234567890"
+AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+
+db_password = "env(DB_PASSWORD)"
+
+ENCODED_TOKEN = "Basic YWxhZGRpbjpvcGVuc2VzYW1l"
+client_id = "123456.apps.googleusercontent.com"
+client_secret = "X1a2BcDeFGHIJKLMNOPQRSTUVWXYZ"
+
+dummy_string = "thisisaverysecretkeybutnotreally"
+fake_token = "ghp_thisisnotarealtokenjustlookslikeone"
+
+def connect_to_api():
+    token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+    headers = {"Authorization": token}
+    response = requests.get("https://api.example.com/data", headers=headers)
+    return response.json()
+
+# Username: admin
+# Password: admin123
+
+config = '{"access_token": "ya29.a0AfH6SMCfakeTokenValue"}'
+
+multiline_token = """
+-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASC...
+-----END PRIVATE KEY-----
+"""
+
+not_a_secret = "I love pizza and dragons!"
+
+print("Secrets test file loaded.")
