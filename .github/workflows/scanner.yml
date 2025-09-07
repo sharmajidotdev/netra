@@ -4,6 +4,9 @@ on:
   pull_request:
     # Trigger on PR events like opened, synchronize, and reopened
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - '**'
 
 jobs:
   run-scan:
@@ -14,12 +17,15 @@ jobs:
 
       - name: list all files
         run: ls -alh
-              
+
       - name: Run netra scan on each file
         run: |
           # Fetch the list of files changed in the commit
           changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
           
+          echo "-----changed_files-------"
+          echo $changed_files
+          echo "-----------------"
           # Loop through each file and run the netra scan command
           for file in $changed_files; do
             if [[ -f "$file" ]]; then
@@ -27,3 +33,5 @@ jobs:
               ./netra scan --llm --llm-provider ollama --llm-model llama3:8b --llm-api-key "s" "$file"
             fi
           done
+          echo "-----done-------"
+          ./netra scan --llm --llm-provider ollama --llm-model llama3:8b --llm-api-key "s" ./ss
